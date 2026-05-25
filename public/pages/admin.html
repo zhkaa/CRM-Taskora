@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taskora — Панель администратора</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<nav class="navbar">
+  <a href="/dashboard" class="navbar-logo"><span class="logo-dot"></span>Taskora</a>
+  <div class="navbar-right">
+    <span class="badge badge-admin">⚡ Админ</span>
+    <span class="navbar-username" id="navUsername"></span>
+    <a href="/dashboard" class="btn btn-ghost btn-sm">Панель</a>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">Выйти</button>
+  </div>
+</nav>
+
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-title">Панель администратора</div>
+    <div class="admin-nav-item active" onclick="showSection('analytics')" id="nav-analytics">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Аналитика
+    </div>
+    <div class="admin-nav-item" onclick="showSection('companies')" id="nav-companies">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Компании
+    </div>
+    <div class="admin-nav-item" onclick="showSection('create-company')" id="nav-create-company">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      Новая компания
+    </div>
+    <div class="admin-nav-item" onclick="showSection('users')" id="nav-users">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Все пользователи
+    </div>
+    <div class="admin-nav-item" onclick="showSection('create-user')" id="nav-create-user">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+      Создать пользователя
+    </div>
+  </aside>
+
+  <div class="admin-content">
+
+    <!-- ── Analytics ── -->
+    <div id="section-analytics">
+      <h2 class="page-title" style="margin-bottom:8px">Аналитика</h2>
+      <p class="page-subtitle" style="margin-bottom:24px">Обзор платформы по всем компаниям</p>
+      <div id="statsGrid" class="admin-stats">
+        <div class="loading-state" style="grid-column:1/-1;padding:40px">
+          <div class="spinner" style="border-color:rgba(124,106,247,0.3);border-top-color:var(--accent);"></div>
+          Загрузка статистики...
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:8px" id="analyticsGrid">
+        <div id="topSection"></div>
+        <div id="prioritySection"></div>
+      </div>
+    </div>
+
+    <!-- ── Companies ── -->
+    <div id="section-companies" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div>
+          <h2 class="page-title" style="margin-bottom:4px">Компании</h2>
+          <p class="page-subtitle">Управление клиентскими компаниями</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="showSection('create-company')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Новая компания
+        </button>
+      </div>
+      <div id="companiesGrid" class="companies-grid"></div>
+    </div>
+
+    <!-- ── Create Company ── -->
+    <div id="section-create-company" style="display:none">
+      <a class="back-link" onclick="showSection('companies')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        Назад к компаниям
+      </a>
+      <h2 class="page-title" style="margin-bottom:8px">Новая компания</h2>
+      <p class="page-subtitle" style="margin-bottom:24px">Зарегистрируйте новую клиентскую компанию в Taskora</p>
+      <div class="form-card" style="max-width:500px">
+        <form class="form-stack" id="createCompanyForm">
+          <div class="form-group">
+            <label class="form-label">Название компании <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" id="compName" placeholder="Acme Corp" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Тариф</label>
+            <div class="role-select-grid" style="grid-template-columns:repeat(3,1fr)">
+              <label class="role-option employee">
+                <input type="radio" name="compPlan" value="starter" checked>
+                <span class="role-label"><span>🌱</span>Starter</span>
+              </label>
+              <label class="role-option pm">
+                <input type="radio" name="compPlan" value="pro">
+                <span class="role-label"><span>⚡</span>Pro</span>
+              </label>
+              <label class="role-option admin">
+                <input type="radio" name="compPlan" value="enterprise">
+                <span class="role-label"><span>🏢</span>Enterprise</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" onclick="showSection('companies')">Отмена</button>
+            <button type="submit" class="btn btn-primary" id="createCompanyBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              Создать компанию
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Company Detail ── -->
+    <div id="section-company-detail" style="display:none">
+      <a class="back-link" onclick="showSection('companies')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        Back to Companies
+      </a>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div>
+          <h2 class="page-title" style="margin-bottom:4px" id="detailCompanyName"></h2>
+          <p class="page-subtitle" id="detailCompanyMeta"></p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="openEditCompany()">Редактировать</button>
+          <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(248,113,113,0.3)" onclick="deleteCurrentCompany()">Удалить</button>
+        </div>
+      </div>
+      <div id="detailStats" class="admin-stats" style="margin-bottom:24px"></div>
+      <!-- Invite Code Block -->
+      <div id="detailInviteBlock" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Код приглашения команды</div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span id="detailInviteCode" style="font-family:monospace;font-size:22px;font-weight:700;letter-spacing:0.12em;color:var(--accent)"></span>
+              <button class="btn btn-secondary btn-sm" onclick="copyInviteCode()">Копировать</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" id="toggleInviteBtn" onclick="toggleInvite()">Отключить</button>
+            <button class="btn btn-secondary btn-sm" onclick="resetInvite()">Сбросить код</button>
+          </div>
+        </div>
+        <p id="inviteStatusMsg" style="font-size:12px;color:var(--text3);margin-top:10px">
+          Share this code with team members to let them register and join this company.
+        </p>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h3 style="font-family:var(--font-display);font-size:16px;font-weight:700">Участники команды</h3>
+        <button class="btn btn-primary btn-sm" onclick="showCreateUserForCompany()">+ Добавить участника</button>
+      </div>
+      <div class="users-table-wrap"><div id="detailUsersTable"></div></div>
+    </div>
+
+    <!-- ── All Users ── -->
+    <div id="section-users" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div>
+          <h2 class="page-title" style="margin-bottom:4px">Все пользователи</h2>
+          <p class="page-subtitle">Каждый пользователь во всех компаниях</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="showSection('create-user')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Добавить пользователя
+        </button>
+      </div>
+      <div class="users-table-wrap"><div id="usersTable">
+        <div class="loading-state" style="padding:40px">
+          <div class="spinner" style="border-color:rgba(124,106,247,0.3);border-top-color:var(--accent);"></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ── Create User ── -->
+    <div id="section-create-user" style="display:none">
+      <a class="back-link" id="createUserBack" onclick="showSection('users')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        Назад
+      </a>
+      <h2 class="page-title" style="margin-bottom:8px">Создать пользователя</h2>
+      <p class="page-subtitle" style="margin-bottom:24px">Добавить нового сотрудника</p>
+      <div class="form-card" style="max-width:500px">
+        <form class="form-stack" id="createUserForm">
+          <div class="form-group">
+            <label class="form-label">Имя пользователя <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" id="newUsername" placeholder="username" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Пароль <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="password" id="newPassword" placeholder="min. 6 characters" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Роль <span style="color:var(--red)">*</span></label>
+            <div class="role-select-grid">
+              <label class="role-option pm"><input type="radio" name="newRole" value="pm"><span class="role-label"><span>👑</span>PM</span></label>
+              <label class="role-option employee"><input type="radio" name="newRole" value="employee" checked><span class="role-label"><span>👤</span>Employee</span></label>
+            </div>
+          </div>
+          <div class="form-group" id="companySelectGroup">
+            <label class="form-label">Компания <span style="color:var(--red)">*</span></label>
+            <select class="form-select" id="newUserCompany"></select>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" id="createUserCancelBtn" onclick="showSection('users')">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="createUserBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              Create User
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="editUserModal" style="display:none;" onclick="closeUserModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Edit User</h2>
+      <button class="btn-icon" onclick="closeUserModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form class="modal-form" id="editUserForm">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="form-input" type="text" id="euUsername" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">New Password <span style="color:var(--text3);font-size:11px">(leave blank to keep)</span></label>
+        <input class="form-input" type="password" id="euPassword" placeholder="New password..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role</label>
+        <div class="role-select-grid">
+          <label class="role-option pm"><input type="radio" name="euRole" value="pm"><span class="role-label"><span>👑</span>PM</span></label>
+          <label class="role-option employee"><input type="radio" name="euRole" value="employee"><span class="role-label"><span>👤</span>Employee</span></label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Company</label>
+        <select class="form-select" id="euCompany"></select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeUserModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="euSubmit">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Company Modal -->
+<div class="modal-overlay" id="editCompanyModal" style="display:none;" onclick="closeCompanyModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Edit Company</h2>
+      <button class="btn-icon" onclick="closeCompanyModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form class="modal-form" id="editCompanyForm">
+      <div class="form-group">
+        <label class="form-label">Company Name</label>
+        <input class="form-input" type="text" id="ecName" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Plan</label>
+        <div class="role-select-grid" style="grid-template-columns:repeat(3,1fr)">
+          <label class="role-option employee"><input type="radio" name="ecPlan" value="starter"><span class="role-label"><span>🌱</span>Starter</span></label>
+          <label class="role-option pm"><input type="radio" name="ecPlan" value="pro"><span class="role-label"><span>⚡</span>Pro</span></label>
+          <label class="role-option admin"><input type="radio" name="ecPlan" value="enterprise"><span class="role-label"><span>🏢</span>Enterprise</span></label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeCompanyModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="ecSubmit">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/utils.js"></script>
+<script>
+let allUsers     = [];
+let allCompanies = [];
+let editingUId   = null;
+let editingCId   = null;
+let detailCId    = null;
+let createUserForCompany = null;
+
+async function init() {
+  const user = await requireAuth();
+  if (!user || user.role !== 'admin') { window.location.href='/dashboard'; return; }
+  document.getElementById('navUsername').textContent = user.username;
+  await Promise.all([loadStats(), loadUsers(), loadCompanies()]);
+}
+
+// ── Sections ──
+function showSection(name) {
+  ['analytics','companies','create-company','company-detail','users','create-user'].forEach(s => {
+    document.getElementById('section-'+s).style.display = s===name?'block':'none';
+    const nav = document.getElementById('nav-'+s);
+    if (nav) nav.classList.toggle('active', s===name);
+  });
+}
+
+// ── Analytics ──
+async function loadStats() {
+  const res = await API.get('/api/users/stats');
+  if (!res.ok) return;
+  const s = res.data;
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="admin-stat accent"><div class="admin-stat-num">${s.totalCompanies}</div><div class="admin-stat-label">Companies</div></div>
+    <div class="admin-stat"><div class="admin-stat-num">${s.totalUsers}</div><div class="admin-stat-label">Team Members</div></div>
+    <div class="admin-stat"><div class="admin-stat-num">${s.totalTasks}</div><div class="admin-stat-label">Total Tasks</div></div>
+    <div class="admin-stat success"><div class="admin-stat-num">${s.doneTasks}</div><div class="admin-stat-label">Completed</div></div>
+    <div class="admin-stat accent"><div class="admin-stat-num">${s.doingTasks}</div><div class="admin-stat-label">In Progress</div></div>
+    <div class="admin-stat danger"><div class="admin-stat-num">${s.overdueTasks}</div><div class="admin-stat-label">Overdue</div></div>`;
+
+  // Top companies
+  const ranks = ['gold','silver','bronze'];
+  document.getElementById('topSection').innerHTML = `
+    <h3 style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:16px">🏢 Top Companies</h3>
+    <div class="top-list">
+      ${(s.topCompanies||[]).map((c,i) => `
+        <div class="top-item">
+          <div class="top-rank ${ranks[i]||''}">#${i+1}</div>
+          <div class="top-info">
+            <div class="top-name">${esc(c.name)}</div>
+            <div class="top-sub">${planBadge(c.plan)} · ${c.members} members · ${c.total_tasks} tasks</div>
+          </div>
+          <div class="top-done">${c.done_tasks||0}</div>
+        </div>`).join('')}
+    </div>`;
+
+  // Priority breakdown
+  const pMap = {};
+  s.byPriority.forEach(p => pMap[p.priority] = p.cnt);
+  const total = (pMap.low||0)+(pMap.medium||0)+(pMap.high||0);
+  const pBar = (val, color) => {
+    const pct = total>0?Math.round(val/total*100):0;
+    return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <div style="width:60px;font-size:13px;color:var(--text2);text-align:right">${pct}%</div>
+      <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width 0.4s"></div>
+      </div>
+      <div style="width:28px;font-size:13px;color:var(--text3)">${val}</div>
+    </div>`;
+  };
+  document.getElementById('prioritySection').innerHTML = `
+    <h3 style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:16px">📊 Tasks by Priority</h3>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:16px">
+        <span>△ High</span><span>◇ Medium</span><span>▽ Low</span>
+      </div>
+      ${pBar(pMap.high||0,'var(--red)')}
+      ${pBar(pMap.medium||0,'var(--yellow)')}
+      ${pBar(pMap.low||0,'var(--green)')}
+      <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:8px">${total} tasks total</div>
+    </div>`;
+}
+
+// ── Companies ──
+async function loadCompanies() {
+  const res = await API.get('/api/companies');
+  if (!res.ok) return;
+  allCompanies = res.data;
+  renderCompaniesGrid();
+}
+
+function planBadge(plan) {
+  const cfg = { starter:'🌱 Starter', pro:'⚡ Pro', enterprise:'🏢 Enterprise' };
+  const colors = { starter:'var(--green)', pro:'var(--accent)', enterprise:'var(--yellow)' };
+  return `<span style="font-size:11px;font-weight:600;color:${colors[plan]||'var(--text2)'}">${cfg[plan]||plan}</span>`;
+}
+
+function renderCompaniesGrid() {
+  const grid = document.getElementById('companiesGrid');
+  if (!allCompanies.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-title">No companies yet</div><p class="empty-desc">Create the first company to get started.</p><a class="btn btn-primary" onclick="showSection('create-company')" style="cursor:pointer">+ New Company</a></div>`;
+    return;
+  }
+  grid.innerHTML = allCompanies.map(c => `
+    <div class="company-card" onclick="openCompanyDetail(${c.id})" style="cursor:pointer">
+      <div class="company-card-header">
+        <div class="company-avatar">${esc(c.name).slice(0,2).toUpperCase()}</div>
+        <div>
+          <div class="company-name">${esc(c.name)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${planBadge(c.plan)}</div>
+        </div>
+      </div>
+      <div class="company-stats">
+        <div class="company-stat"><span class="company-stat-num">${c.member_count||0}</span><span class="company-stat-label">Members</span></div>
+        <div class="company-stat"><span class="company-stat-num">${c.task_count||0}</span><span class="company-stat-label">Tasks</span></div>
+        <div class="company-stat"><span class="company-stat-num" style="color:var(--green)">${c.done_count||0}</span><span class="company-stat-label">Done</span></div>
+        <div class="company-stat"><span class="company-stat-num" style="color:${c.overdue_count>0?'var(--red)':'var(--text3)'}">${c.overdue_count||0}</span><span class="company-stat-label">Overdue</span></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:12px">Created ${formatDate(c.created_at)}</div>
+    </div>`).join('');
+}
+
+async function openCompanyDetail(id) {
+  detailCId = id;
+  const c = allCompanies.find(x=>x.id===id);
+  if (!c) return;
+  document.getElementById('detailCompanyName').textContent = c.name;
+  document.getElementById('detailCompanyMeta').innerHTML = `${planBadge(c.plan)} · Created ${formatDate(c.created_at)}`;
+  document.getElementById('detailStats').innerHTML = `
+    <div class="admin-stat"><div class="admin-stat-num">${c.member_count||0}</div><div class="admin-stat-label">Members</div></div>
+    <div class="admin-stat"><div class="admin-stat-num">${c.task_count||0}</div><div class="admin-stat-label">Tasks</div></div>
+    <div class="admin-stat success"><div class="admin-stat-num">${c.done_count||0}</div><div class="admin-stat-label">Done</div></div>
+    <div class="admin-stat danger"><div class="admin-stat-num">${c.overdue_count||0}</div><div class="admin-stat-label">Overdue</div></div>`;
+  showSection('company-detail');
+  // Показываем invite-код
+  const fullComp = allCompanies.find(x=>x.id===id);
+  if (fullComp) {
+    const cRes = await API.get('/api/companies');
+    if (cRes.ok) {
+      const fresh = cRes.data.find(x=>x.id===id);
+      if (fresh) {
+        document.getElementById('detailInviteCode').textContent = fresh.invite_code || '—';
+        const toggleBtn = document.getElementById('toggleInviteBtn');
+        toggleBtn.textContent = fresh.invite_enabled ? 'Disable' : 'Enable';
+        toggleBtn.style.color = fresh.invite_enabled ? 'var(--red)' : 'var(--green)';
+        document.getElementById('inviteStatusMsg').textContent = fresh.invite_enabled
+          ? 'Share this code with team members to let them register and join this company.'
+          : '⚠️ Invite is disabled. New members cannot join with this code.';
+      }
+    }
+  }
+  const res = await API.get('/api/companies/'+id+'/users');
+  if (!res.ok) return;
+  renderDetailUsers(res.data);
+}
+
+function renderDetailUsers(users) {
+  if (!users.length) {
+    document.getElementById('detailUsersTable').innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon">👤</div><div class="empty-title">No members yet</div><p class="empty-desc">Add the first member to this company.</p></div>`;
+    return;
+  }
+  document.getElementById('detailUsersTable').innerHTML = `
+    <table>
+      <thead><tr><th>User</th><th>Role</th><th>Tasks</th><th>Done</th><th>Overdue</th><th>Actions</th></tr></thead>
+      <tbody>${users.map(u => `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="avatar" style="width:32px;height:32px;font-size:12px">${esc(u.username).slice(0,2).toUpperCase()}</div>
+              <div>
+                <div style="font-weight:600;font-size:14px">${esc(u.username)}</div>
+                <div style="font-size:12px;color:var(--text3)">Since ${formatDate(u.created_at)}</div>
+              </div>
+            </div>
+          </td>
+          <td>${roleBadge(u.role)}</td>
+          <td><span style="font-weight:600">${u.total_tasks||0}</span></td>
+          <td><span style="color:var(--green);font-weight:600">${u.done_count||0}</span></td>
+          <td>${u.overdue_count>0?`<span style="color:var(--red);font-weight:600">${u.overdue_count}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+          <td>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openEditUser(${u.id})">Edit</button>
+              <button class="btn-icon danger" onclick="event.stopPropagation();deleteUser(${u.id})" title="Delete">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function showCreateUserForCompany() {
+  createUserForCompany = detailCId;
+  const comp = allCompanies.find(c=>c.id===detailCId);
+  document.getElementById('createUserBack').onclick = () => openCompanyDetail(detailCId);
+  populateCompanySelect('newUserCompany', detailCId);
+  showSection('create-user');
+}
+
+// ── Create Company ──
+document.getElementById('createCompanyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('createCompanyBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Creating...';
+  const name = document.getElementById('compName').value.trim();
+  const plan = document.querySelector('input[name="compPlan"]:checked')?.value || 'starter';
+  const res = await API.post('/api/companies', { name, plan });
+  if (res.ok) {
+    showToast(`Company "${name}" created!`);
+    document.getElementById('createCompanyForm').reset();
+    await loadCompanies(); await loadStats();
+    showSection('companies');
+  } else showToast(res.data.error||'Failed.','error');
+  btn.disabled=false;
+  btn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Create Company`;
+});
+
+// ── Edit Company Modal ──
+function openEditCompany() {
+  const c = allCompanies.find(x=>x.id===detailCId);
+  if (!c) return;
+  editingCId = detailCId;
+  document.getElementById('ecName').value = c.name;
+  document.querySelector(`input[name="ecPlan"][value="${c.plan}"]`).checked = true;
+  document.getElementById('editCompanyModal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+
+function closeCompanyModal(e) {
+  if (e && e.target!==e.currentTarget) return;
+  document.getElementById('editCompanyModal').style.display='none';
+  document.body.style.overflow='';
+}
+
+document.getElementById('editCompanyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('ecSubmit');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Saving...';
+  const name = document.getElementById('ecName').value.trim();
+  const plan = document.querySelector('input[name="ecPlan"]:checked')?.value;
+  const res = await API.put('/api/companies/'+editingCId, { name, plan });
+  if (res.ok) {
+    showToast('Company updated!');
+    await loadCompanies(); await loadStats();
+    closeCompanyModal();
+    openCompanyDetail(editingCId);
+  } else showToast(res.data.error||'Failed.','error');
+  btn.disabled=false; btn.innerHTML='Save Changes';
+});
+
+async function deleteCurrentCompany() {
+  const c = allCompanies.find(x=>x.id===detailCId);
+  if (!confirm(`Delete company "${c?.name}"? All its users and tasks will also be deleted.`)) return;
+  const res = await API.delete('/api/companies/'+detailCId);
+  if (res.ok) {
+    showToast('Company deleted.');
+    await loadCompanies(); await loadStats();
+    showSection('companies');
+  } else showToast(res.data.error||'Failed.','error');
+}
+
+// ── Users ──
+async function loadUsers() {
+  const res = await API.get('/api/users');
+  if (!res.ok) return;
+  allUsers = res.data;
+  renderUsersTable();
+}
+
+function renderUsersTable() {
+  document.getElementById('usersTable').innerHTML = `
+    <table>
+      <thead><tr><th>User</th><th>Role</th><th>Company</th><th>Tasks</th><th>Done</th><th>Overdue</th><th>Actions</th></tr></thead>
+      <tbody>${allUsers.map(u => {
+        const comp = allCompanies.find(c=>c.id===u.company_id);
+        return `<tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="avatar" style="width:32px;height:32px;font-size:12px">${esc(u.username).slice(0,2).toUpperCase()}</div>
+              <div>
+                <div style="font-weight:600;font-size:14px">${esc(u.username)}</div>
+                <div style="font-size:12px;color:var(--text3)">Since ${formatDate(u.created_at)}</div>
+              </div>
+            </div>
+          </td>
+          <td>${roleBadge(u.role)}</td>
+          <td>${comp?`<span style="font-size:13px;color:var(--text2)">${esc(comp.name)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+          <td><span style="font-weight:600">${u.total_tasks||0}</span></td>
+          <td><span style="color:var(--green);font-weight:600">${u.done_count||0}</span></td>
+          <td>${u.overdue_count>0?`<span style="color:var(--red);font-weight:600">${u.overdue_count}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+          <td>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-sm btn-secondary" onclick="openEditUser(${u.id})">Edit</button>
+              <button class="btn-icon danger" onclick="deleteUser(${u.id})" title="Delete">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>`;}).join('')}
+      </tbody>
+    </table>`;
+}
+
+function populateCompanySelect(selectId, selectedId) {
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = allCompanies.map(c =>
+    `<option value="${c.id}" ${c.id===selectedId?'selected':''}>${esc(c.name)}</option>`
+  ).join('');
+}
+
+// ── Create User ──
+document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('createUserBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Creating...';
+  const username   = document.getElementById('newUsername').value.trim();
+  const password   = document.getElementById('newPassword').value;
+  const role       = document.querySelector('input[name="newRole"]:checked')?.value || 'employee';
+  const company_id = parseInt(document.getElementById('newUserCompany').value);
+  const res = await API.post('/api/users', { username, password, role, company_id });
+  if (res.ok) {
+    showToast(`User "${username}" created!`);
+    document.getElementById('createUserForm').reset();
+    await loadUsers(); await loadCompanies(); await loadStats();
+    if (createUserForCompany) {
+      openCompanyDetail(createUserForCompany);
+      createUserForCompany = null;
+    } else showSection('users');
+  } else showToast(res.data.error||'Failed.','error');
+  btn.disabled=false;
+  btn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Create User`;
+});
+
+// ── Edit User Modal ──
+function openEditUser(id) {
+  const u = allUsers.find(x=>x.id===id);
+  if (!u) return;
+  editingUId = id;
+  document.getElementById('euUsername').value = u.username;
+  document.getElementById('euPassword').value = '';
+  const roleVal = ['pm','employee'].includes(u.role) ? u.role : 'employee';
+  document.querySelector(`input[name="euRole"][value="${roleVal}"]`).checked = true;
+  populateCompanySelect('euCompany', u.company_id);
+  document.getElementById('editUserModal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+
+function closeUserModal(e) {
+  if (e && e.target!==e.currentTarget) return;
+  document.getElementById('editUserModal').style.display='none';
+  document.body.style.overflow='';
+  editingUId=null;
+}
+
+document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('euSubmit');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Saving...';
+  const username   = document.getElementById('euUsername').value.trim();
+  const password   = document.getElementById('euPassword').value;
+  const role       = document.querySelector('input[name="euRole"]:checked')?.value;
+  const company_id = parseInt(document.getElementById('euCompany').value);
+  const body = { username, role, company_id };
+  if (password) body.password = password;
+  const res = await API.put('/api/users/'+editingUId, body);
+  if (res.ok) {
+    showToast('User updated!');
+    await loadUsers(); await loadCompanies(); await loadStats();
+    closeUserModal();
+    if (detailCId) openCompanyDetail(detailCId);
+  } else showToast(res.data.error||'Failed.','error');
+  btn.disabled=false; btn.innerHTML='Save Changes';
+});
+
+async function deleteUser(id) {
+  const u = allUsers.find(x=>x.id===id);
+  if (!confirm(`Delete user "${u?.username}"? All their tasks will also be deleted.`)) return;
+  const res = await API.delete('/api/users/'+id);
+  if (res.ok) {
+    showToast('User deleted.');
+    await loadUsers(); await loadCompanies(); await loadStats();
+    if (detailCId) openCompanyDetail(detailCId);
+  } else showToast(res.data.error||'Failed.','error');
+}
+
+// Заполняем select при показе create-user
+const origShowSection = showSection;
+window.showSection = function(name) {
+  origShowSection(name);
+  if (name === 'create-user') populateCompanySelect('newUserCompany', createUserForCompany || (allCompanies[0]?.id));
+  if (name === 'users') { document.getElementById('createUserBack').onclick = () => showSection('users'); createUserForCompany = null; }
+};
+
+function copyInviteCode() {
+  const code = document.getElementById('detailInviteCode').textContent;
+  if (code && code !== '—') {
+    navigator.clipboard.writeText(code).then(() => showToast('Invite code copied!'));
+  }
+}
+
+async function resetInvite() {
+  if (!confirm('Reset invite code? The old code will stop working immediately.')) return;
+  const res = await API.post('/api/companies/'+detailCId+'/reset-invite');
+  if (res.ok) {
+    document.getElementById('detailInviteCode').textContent = res.data.invite_code;
+    showToast('Invite code reset!');
+  } else showToast(res.data.error||'Failed.','error');
+}
+
+async function toggleInvite() {
+  const res = await API.post('/api/companies/'+detailCId+'/toggle-invite');
+  if (res.ok) {
+    const enabled = res.data.invite_enabled;
+    const btn = document.getElementById('toggleInviteBtn');
+    btn.textContent = enabled ? 'Disable' : 'Enable';
+    btn.style.color = enabled ? 'var(--red)' : 'var(--green)';
+    document.getElementById('inviteStatusMsg').textContent = enabled
+      ? 'Share this code with team members to let them register and join this company.'
+      : '⚠️ Invite is disabled. New members cannot join with this code.';
+    showToast(enabled ? 'Invite enabled.' : 'Invite disabled.');
+  } else showToast(res.data.error||'Failed.','error');
+}
+
+init();
+</script>
+</body>
+</html>

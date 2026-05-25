@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taskora — Редактирование задачи</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/dashboard" class="navbar-logo">
+    <span class="logo-dot"></span>Taskora
+  </a>
+  <div class="navbar-right">
+    <span class="navbar-username" id="navUsername"></span>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">Выйти</button>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="form-page">
+    <a href="/dashboard" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+      Вернуться на панель
+    </a>
+    <div class="page-header" style="margin-bottom:24px;">
+      <div>
+        <h1 class="page-title">Редактировать задачу</h1>
+        <p class="page-subtitle">Обновите данные задачи</p>
+      </div>
+    </div>
+    <div class="form-card" id="formContainer">
+      <div class="loading-state">
+        <div class="spinner" style="border-color:rgba(124,106,247,0.3);border-top-color:var(--accent);"></div>
+        Загрузка задачи...
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast-container"></div>
+<script src="/js/utils.js"></script>
+<script>
+const taskId = window.location.pathname.split('/').pop();
+
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function init() {
+  const user = await requireAuth();
+  if (!user) return;
+  document.getElementById('navUsername').textContent = user.username;
+  await loadTask();
+}
+
+async function loadTask() {
+  const res = await API.get('/api/tasks/' + taskId);
+  if (!res.ok) {
+    document.getElementById('formContainer').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-title">Задача не найдена</div>
+        <a href="/dashboard" class="btn btn-primary" style="margin-top:16px">Вернуться на панель</a>
+      </div>`;
+    return;
+  }
+  const t = res.data;
+  document.getElementById('formContainer').innerHTML = `
+    <form class="form-stack" id="editForm">
+      <div class="form-group">
+        <label class="form-label">Название <span style="color:var(--red)">*</span></label>
+        <input class="form-input" type="text" id="taskTitle" value="${esc(t.title)}" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Описание</label>
+        <textarea class="form-textarea" id="taskDesc"
+                  style="min-height:120px;">${esc(t.description || '')}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Статус</label>
+        <div class="status-grid">
+          ${['todo','doing','done'].map(s => `
+            <label class="status-option">
+              <input type="radio" name="taskStatus" value="${s}" ${t.status===s?'checked':''} />
+              <span class="status-label">${s==='todo'?'Запланировано':s==='doing'?'В работе':'Выполнено'}</span>
+            </label>`).join('')}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Приоритет</label>
+        <div class="priority-grid">
+          ${['low','medium','high'].map(p => `
+            <label class="priority-option ${p}">
+              <input type="radio" name="taskPriority" value="${p}" ${t.priority===p?'checked':''} />
+              <span class="priority-label">${p==='low'?'▽ Низкий':p==='medium'?'◇ Средний':'△ Высокий'}</span>
+            </label>`).join('')}
+        </div>
+      </div>
+      <div class="form-actions">
+        <a href="/dashboard" class="btn btn-ghost">Отмена</a>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Сохранить</button>
+      </div>
+    </form>`;
+
+  document.getElementById('editForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Сохранение...';
+    const title       = document.getElementById('taskTitle').value.trim();
+    const description = document.getElementById('taskDesc').value;
+    const status      = document.querySelector('input[name="taskStatus"]:checked')?.value;
+    const priority    = document.querySelector('input[name="taskPriority"]:checked')?.value;
+    const res = await API.put('/api/tasks/' + taskId, { title, description, status, priority });
+    if (res.ok) {
+      showToast('Задача обновлена!');
+      setTimeout(() => window.location.href = '/dashboard', 700);
+    } else {
+      showToast(res.data.error || 'Не удалось сохранить.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = 'Сохранить';
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>

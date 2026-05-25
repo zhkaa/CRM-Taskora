@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taskora — Регистрация</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .register-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .register-box {
+      width: 100%;
+      max-width: 480px;
+    }
+    .register-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      text-decoration: none;
+      margin-bottom: 36px;
+      justify-content: center;
+    }
+    .register-logo .logo-dot {
+      width: 10px; height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--accent);
+    }
+    .type-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .type-btn {
+      padding: 18px 12px;
+      border-radius: var(--radius-lg);
+      border: 2px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--transition);
+      font-family: var(--font-body);
+    }
+    .type-btn:hover { border-color: var(--border2); color: var(--text); }
+    .type-btn.active {
+      border-color: var(--accent);
+      background: rgba(124,106,247,0.08);
+      color: var(--text);
+    }
+    .type-btn .type-icon { font-size: 28px; display: block; margin-bottom: 8px; }
+    .type-btn .type-label { font-family: var(--font-display); font-size: 15px; font-weight: 700; display: block; margin-bottom: 4px; }
+    .type-btn .type-desc  { font-size: 12px; color: var(--text3); line-height: 1.4; }
+    .type-btn.active .type-desc { color: var(--text2); }
+
+    .form-panel { display: none; }
+    .form-panel.active { display: block; }
+
+    .invite-preview {
+      display: none;
+      background: rgba(52,211,153,0.08);
+      border: 1px solid rgba(52,211,153,0.25);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-top: 8px;
+    }
+    .invite-preview.show { display: flex; align-items: center; gap: 10px; }
+    .invite-preview-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--green);
+    }
+    .invite-preview-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+    .plan-grid {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 10px;
+    }
+    .plan-opt {
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      background: var(--surface);
+      position: relative;
+    }
+    .plan-opt input { position: absolute; opacity: 0; pointer-events: none; }
+    .plan-opt:has(input:checked) {
+      border-color: var(--accent);
+      background: rgba(124,106,247,0.08);
+    }
+    .plan-opt .plan-icon  { font-size: 22px; display: block; margin-bottom: 6px; }
+    .plan-opt .plan-name  { font-family: var(--font-display); font-size: 13px; font-weight: 700; }
+    .plan-opt .plan-price { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  </style>
+</head>
+<body>
+<div class="register-wrap">
+  <div class="register-box">
+    <a href="/" class="register-logo">
+      <span class="logo-dot"></span>Taskora
+    </a>
+
+    <div class="form-card">
+      <h2 class="page-title" style="margin-bottom:6px;font-size:22px">Создать аккаунт</h2>
+      <p class="page-subtitle" style="margin-bottom:24px">Выберите, как хотите присоединиться к Taskora</p>
+
+      <!-- Выбор типа -->
+      <div class="type-toggle">
+        <div class="type-btn active" id="typeCompanyBtn" onclick="setType('company')">
+          <span class="type-icon">🏢</span>
+          <span class="type-label">Зарегистрировать компанию</span>
+          <span class="type-desc">Я менеджер и хочу зарегистрировать свою компанию в Taskora</span>
+        </div>
+        <div class="type-btn" id="typeEmployeeBtn" onclick="setType('employee')">
+          <span class="type-icon">👤</span>
+          <span class="type-label">Присоединиться к компании</span>
+          <span class="type-desc">У меня есть код приглашения от менеджера</span>
+        </div>
+      </div>
+
+      <!-- Форма компании -->
+      <div class="form-panel active" id="panelCompany">
+        <form class="form-stack" id="companyForm">
+          <div class="form-group">
+            <label class="form-label">Название компании <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" id="cCompanyName" placeholder="Acme Corp" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">План</label>
+            <div class="plan-grid">
+              <label class="plan-opt">
+                <input type="radio" name="cPlan" value="starter" checked />
+                <span class="plan-icon">🌱</span>
+                <span class="plan-name">Starter</span>
+                <span class="plan-price">Бесплатно</span>
+              </label>
+              <label class="plan-opt">
+                <input type="radio" name="cPlan" value="pro" />
+                <span class="plan-icon">⚡</span>
+                <span class="plan-name">Pro</span>
+                <span class="plan-price">$29/мес</span>
+              </label>
+              <label class="plan-opt">
+                <input type="radio" name="cPlan" value="enterprise" />
+                <span class="plan-icon">🏢</span>
+                <span class="plan-name">Enterprise</span>
+                <span class="plan-price">По запросу</span>
+              </label>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--border);margin:4px 0 16px;padding-top:16px">
+            <p style="font-size:13px;color:var(--text3);margin-bottom:16px">Your manager account credentials</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Имя пользователя <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" id="cUsername" placeholder="имя пользователя" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Пароль <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="password" id="cPassword" placeholder="мин. 6 символов" required />
+          </div>
+          <div id="cError" style="display:none;color:var(--red);font-size:13px;padding:10px 14px;background:var(--red-bg);border-radius:var(--radius);border:1px solid rgba(248,113,113,0.2)"></div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="cBtn">
+            Register Company
+          </button>
+        </form>
+      </div>
+
+      <!-- Форма сотрудника -->
+      <div class="form-panel" id="panelEmployee">
+        <form class="form-stack" id="employeeForm">
+          <div class="form-group">
+            <label class="form-label">Код приглашения <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" id="eInviteCode"
+              placeholder="ACME-X7K2"
+              style="text-transform:uppercase;letter-spacing:0.1em;font-family:monospace;font-size:16px"
+              oninput="checkInviteCode(this.value)" required />
+            <div class="invite-preview" id="invitePreview">
+              <span style="font-size:22px">✅</span>
+              <div>
+                <div class="invite-preview-name" id="inviteCompanyName"></div>
+                <div class="invite-preview-sub">Вы присоединитесь к этой компании как сотрудник</div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Имя пользователя <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" id="eUsername" placeholder="имя пользователя" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Пароль <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="password" id="ePassword" placeholder="мин. 6 символов" required />
+          </div>
+          <div id="eError" style="display:none;color:var(--red);font-size:13px;padding:10px 14px;background:var(--red-bg);border-radius:var(--radius);border:1px solid rgba(248,113,113,0.2)"></div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="eBtn" disabled>
+            Join Company
+          </button>
+        </form>
+      </div>
+
+      <div style="text-align:center;margin-top:20px;font-size:14px;color:var(--text3)">
+        Уже есть аккаунт?
+        <a href="/" style="color:var(--accent);text-decoration:none;font-weight:500"> Войти</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/utils.js"></script>
+<script>
+let inviteValid = false;
+let inviteCheckTimer = null;
+
+// Редирект если уже залогинен
+redirectIfAuth();
+
+function setType(type) {
+  document.getElementById('typeCompanyBtn').classList.toggle('active',  type==='company');
+  document.getElementById('typeEmployeeBtn').classList.toggle('active', type==='employee');
+  document.getElementById('panelCompany').classList.toggle('active',    type==='company');
+  document.getElementById('panelEmployee').classList.toggle('active',   type==='employee');
+}
+
+// Проверка invite-кода с дебаунсом
+function checkInviteCode(val) {
+  clearTimeout(inviteCheckTimer);
+  const preview = document.getElementById('invitePreview');
+  const btn     = document.getElementById('eBtn');
+  preview.classList.remove('show');
+  inviteValid = false;
+  btn.disabled = true;
+
+  const code = val.trim().toUpperCase();
+  if (code.length < 4) return;
+
+  inviteCheckTimer = setTimeout(async () => {
+    const res = await API.get('/api/invite/' + encodeURIComponent(code));
+    if (res.ok) {
+      document.getElementById('inviteCompanyName').textContent = res.data.company.name;
+      preview.classList.add('show');
+      inviteValid = true;
+      btn.disabled = false;
+    } else {
+      preview.classList.remove('show');
+      inviteValid = false;
+      btn.disabled = true;
+    }
+  }, 500);
+}
+
+// Регистрация компании
+document.getElementById('companyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn   = document.getElementById('cBtn');
+  const errEl = document.getElementById('cError');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Создание...';
+
+  const company_name = document.getElementById('cCompanyName').value.trim();
+  const plan         = document.querySelector('input[name="cPlan"]:checked')?.value || 'starter';
+  const username     = document.getElementById('cUsername').value.trim();
+  const password     = document.getElementById('cPassword').value;
+
+  const res = await API.post('/api/register-company', { company_name, plan, username, password });
+  if (res.ok) {
+    // Показываем invite-код перед редиректом
+    showInviteSuccess(res.data);
+  } else {
+    errEl.textContent    = res.data.error || 'Ошибка регистрации.';
+    errEl.style.display  = 'block';
+    btn.disabled         = false;
+    btn.innerHTML        = 'Зарегистрировать компанию';
+  }
+});
+
+function showInviteSuccess(data) {
+  const box = document.querySelector('.form-card');
+  box.innerHTML = `
+    <div style="text-align:center;padding:16px 0">
+      <div style="font-size:56px;margin-bottom:16px">🎉</div>
+      <h2 class="page-title" style="margin-bottom:8px">Компания зарегистрирована!</h2>
+      <p class="page-subtitle" style="margin-bottom:28px">Добро пожаловать в Taskora, <strong>${esc(data.username)}</strong></p>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px;text-align:left">
+        <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Код приглашения компании</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-family:monospace;font-size:28px;font-weight:700;letter-spacing:0.15em;color:var(--accent)">${data.invite_code}</div>
+          <button class="btn btn-secondary btn-sm" onclick="copyCode('${data.invite_code}')">Copy</button>
+        </div>
+        <p style="font-size:13px;color:var(--text3);margin-top:12px;line-height:1.5">
+          Поделитесь этим кодом с членами команды, чтобы они могли присоединиться к <strong style="color:var(--text)">${esc(data.companyName)}</strong>.
+          Вы можете сбросить или отключить его в любой момент из панели управления.
+        </p>
+      </div>
+
+      <a href="/dashboard" class="btn btn-primary" style="width:100%;justify-content:center">
+        Перейти в панель →
+      </a>
+    </div>`;
+}
+
+function copyCode(code) {
+  navigator.clipboard.writeText(code).then(() => showToast('Код приглашения скопирован!'));
+}
+
+// Регистрация сотрудника
+document.getElementById('employeeForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!inviteValid) return;
+  const btn   = document.getElementById('eBtn');
+  const errEl = document.getElementById('eError');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Подключение...';
+
+  const invite_code = document.getElementById('eInviteCode').value.trim().toUpperCase();
+  const username    = document.getElementById('eUsername').value.trim();
+  const password    = document.getElementById('ePassword').value;
+
+  const res = await API.post('/api/register-employee', { invite_code, username, password });
+  if (res.ok) {
+    showToast(`Добро пожаловать в ${res.data.companyName}!`);
+    setTimeout(() => window.location.href = '/dashboard', 1000);
+  } else {
+    errEl.textContent   = res.data.error || 'Ошибка регистрации.';
+    errEl.style.display = 'block';
+    btn.disabled        = false;
+    btn.innerHTML       = 'Присоединиться';
+  }
+});
+
+function esc(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

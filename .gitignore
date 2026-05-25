@@ -1,0 +1,34 @@
+# dependencies
+node_modules/
+
+# env files
+.env
+.env.*
+
+# logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# database
+*.db
+*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# build
+dist/
+build/
+
+# misc
+coverage/
+.tmp/
+.cache/

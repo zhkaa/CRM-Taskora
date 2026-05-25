@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taskora — Панель задач</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<nav class="navbar">
+  <a href="/dashboard" class="navbar-logo"><span class="logo-dot"></span>Taskora</a>
+  <div class="navbar-right">
+    <span id="navRole"></span>
+    <span class="navbar-username" id="navUsername"></span>
+    <a href="/create-task" class="btn btn-primary btn-sm">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Новая задача
+    </a>
+    <div id="adminLink"></div>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">Выйти</button>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title" id="pageTitle">Панель задач</h1>
+      <p class="page-subtitle" id="pageSubtitle">Загрузка...</p>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-num" id="statTotal">—</div><div class="stat-label">Всего</div></div>
+    <div class="stat-card"><div class="stat-num" id="statTodo">—</div><div class="stat-label">Запланировано</div></div>
+    <div class="stat-card"><div class="stat-num" id="statDoing">—</div><div class="stat-label">В работе</div></div>
+    <div class="stat-card"><div class="stat-num" id="statDone">—</div><div class="stat-label">Выполнено</div></div>
+    <div class="stat-card"><div class="stat-num" id="statOverdue" style="color:var(--red)">—</div><div class="stat-label">Просрочено</div></div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all"   onclick="setFilter('all')">Все <span class="filter-count" id="fc-all">0</span></button>
+    <button class="filter-btn"        data-filter="todo"  onclick="setFilter('todo')">Запланировано <span class="filter-count" id="fc-todo">0</span></button>
+    <button class="filter-btn"        data-filter="doing" onclick="setFilter('doing')">В работе <span class="filter-count" id="fc-doing">0</span></button>
+    <button class="filter-btn"        data-filter="done"  onclick="setFilter('done')">Выполнено <span class="filter-count" id="fc-done">0</span></button>
+    <button class="filter-btn" data-filter="overdue" onclick="setFilter('overdue')" style="color:var(--red)">🔴 Просрочено <span class="filter-count" id="fc-overdue">0</span></button>
+    <div class="search-wrapper">
+      <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" type="text" id="searchInput" placeholder="Поиск задач..." oninput="onSearch()" />
+    </div>
+  </div>
+
+  <div id="mainContent">
+    <div class="loading-state">
+      <div class="spinner" style="border-color:rgba(124,106,247,0.3);border-top-color:var(--accent);"></div>
+      Загрузка...
+    </div>
+  </div>
+</main>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal" style="display:none;" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Редактировать задачу</h2>
+      <button class="btn-icon" onclick="closeModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/utils.js"></script>
+<script>
+let allTasks      = [];
+let allUsers      = [];
+let currentFilter = 'all';
+let currentSearch = '';
+let editingId     = null;
+let activeAssignee = null;
+let currentUser   = null;
+
+async function init() {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+
+  // Админ всегда идёт в свою панель
+  if (currentUser.role === 'admin') {
+    window.location.href = '/admin';
+    return;
+  }
+
+  document.getElementById('navUsername').textContent = currentUser.username;
+  document.getElementById('navRole').innerHTML = roleBadge(currentUser.role);
+
+  if (currentUser.role === 'pm') {
+    document.getElementById('pageTitle').textContent    = 'Командная доска';
+    document.getElementById('pageSubtitle').textContent = 'Все задачи команды';
+    await loadUsers();
+  } else {
+    document.getElementById('pageTitle').textContent    = 'Мои задачи';
+    document.getElementById('pageSubtitle').textContent = 'Задачи, назначенные вам';
+  }
+
+  await loadTasks();
+}
+
+async function loadUsers() {
+  const res = await API.get('/api/users');
+  if (res.ok) allUsers = res.data;
+}
+
+async function loadTasks() {
+  let url = '/api/tasks';
+  const params = [];
+  if (activeAssignee) params.push(`assignee=${activeAssignee}`);
+  if (params.length) url += '?' + params.join('&');
+  const res = await API.get(url);
+  if (!res.ok) { showToast('Не удалось загрузить задачи.', 'error'); return; }
+  allTasks = res.data;
+  updateStats();
+  render();
+}
+
+function isOverdue(t) {
+  return deadlineStatus(t.deadline, t.status) === 'overdue';
+}
+
+function updateStats() {
+  const c = { todo:0, doing:0, done:0, overdue:0 };
+  allTasks.forEach(t => {
+    c[t.status] = (c[t.status]||0)+1;
+    if (isOverdue(t)) c.overdue++;
+  });
+  document.getElementById('statTotal').textContent   = allTasks.length;
+  document.getElementById('statTodo').textContent    = c.todo;
+  document.getElementById('statDoing').textContent   = c.doing;
+  document.getElementById('statDone').textContent    = c.done;
+  document.getElementById('statOverdue').textContent = c.overdue;
+  document.getElementById('fc-all').textContent      = allTasks.length;
+  document.getElementById('fc-todo').textContent     = c.todo;
+  document.getElementById('fc-doing').textContent    = c.doing;
+  document.getElementById('fc-done').textContent     = c.done;
+  document.getElementById('fc-overdue').textContent  = c.overdue;
+}
+
+function getFiltered() {
+  return allTasks.filter(t => {
+    if (currentFilter === 'overdue') return isOverdue(t);
+    const matchS = currentFilter === 'all' || t.status === currentFilter;
+    const q = currentSearch.toLowerCase();
+    const matchQ = !q || t.title.toLowerCase().includes(q) || (t.description||'').toLowerCase().includes(q);
+    return matchS && matchQ;
+  }).filter(t => {
+    if (currentFilter !== 'overdue') {
+      const q = currentSearch.toLowerCase();
+      return !q || t.title.toLowerCase().includes(q) || (t.description||'').toLowerCase().includes(q);
+    }
+    return true;
+  });
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter===f));
+  render();
+}
+function onSearch() { currentSearch = document.getElementById('searchInput').value; render(); }
+
+function render() {
+  if (currentUser.role === 'employee') renderEmployee();
+  else renderPM();
+}
+
+// ── PM / Admin View (Kanban + Team panel) ──
+function renderPM() {
+  const tasks  = getFiltered();
+  document.getElementById('mainContent').innerHTML = `
+    <div class="pm-layout">
+      ${buildTeamPanel()}
+      <div>${buildKanban(tasks)}</div>
+    </div>`;
+}
+
+function buildTeamPanel() {
+  const allOpt = `
+    <div class="team-member ${activeAssignee===null?'active':''}" onclick="filterByAssignee(null)">
+      <div class="team-member-top"><span class="team-member-name">👥 Everyone</span></div>
+    </div>`;
+  const members = allUsers.filter(u => u.role !== 'admin').map(u => {
+    const total = u.total_tasks||0, done = u.done_count||0;
+    const pct   = total>0 ? Math.round(done/total*100) : 0;
+    return `
+      <div class="team-member ${activeAssignee===u.id?'active':''}" onclick="filterByAssignee(${u.id})">
+        <div class="team-member-top">
+          <span class="team-member-name">${esc(u.username)}</span>
+          ${roleBadge(u.role)}
+        </div>
+        <div class="team-member-stats">
+          <span class="tm-stat tm-todo">${u.todo_count||0} todo</span>
+          <span class="tm-stat tm-doing">${u.doing_count||0} doing</span>
+          <span class="tm-stat tm-done">${u.done_count||0} вып.</span>
+          ${u.overdue_count>0?`<span class="tm-stat tm-overdue">${u.overdue_count} проср.</span>`:''}
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <span class="progress-pct">${pct}%</span>
+        </div>
+      </div>`;
+  }).join('');
+  return `<div class="team-panel"><div class="team-panel-header">🏢 Team</div>${allOpt}${members}</div>`;
+}
+
+function buildKanban(tasks) {
+  const cols = { todo:[], doing:[], done:[] };
+  tasks.forEach(t => (cols[t.status]||[]).push(t));
+  const col = (status, label) => `
+    <div class="kanban-col kanban-col-${status}">
+      <div class="kanban-col-header">${label} <span class="filter-count" style="background:rgba(255,255,255,0.08)">${cols[status].length}</span></div>
+      <div class="kanban-col-body">
+        ${cols[status].length ? cols[status].map(kanbanCard).join('') : `<div style="text-align:center;padding:24px;font-size:13px;color:var(--text3)">Задач нет</div>`}
+      </div>
+    </div>`;
+  return `<div class="kanban">${col('todo','Запланировано')}${col('doing','В работе')}${col('done','Выполнено')}</div>`;
+}
+
+function kanbanCard(t) {
+  const overdue = isOverdue(t);
+  const initials = (t.assigned_username||'?').slice(0,2).toUpperCase();
+  return `
+    <div class="kanban-card priority-${t.priority} ${overdue?'overdue':''}" onclick="openModal(${t.id})">
+      <div class="kanban-card-title">${esc(t.title)}</div>
+      ${t.description?`<div style="font-size:12px;color:var(--text2);margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(t.description)}</div>`:''}
+      ${t.deadline ? `<div style="margin-bottom:6px">${deadlineBadge(t.deadline,t.status)}</div>` : ''}
+      <div class="kanban-card-footer">
+        <div class="task-assignee">
+          <div class="avatar">${initials}</div>
+          <span>${esc(t.assigned_username)}</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${priorityBadge(t.priority)}
+          <button class="btn-icon danger" onclick="event.stopPropagation();deleteTask(${t.id})" title="Удалить">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function filterByAssignee(id) {
+  activeAssignee = id;
+  await loadUsers();
+  await loadTasks();
+}
+
+// ── Employee View ──
+function renderEmployee() {
+  const tasks = getFiltered();
+  const c = document.getElementById('mainContent');
+  if (!tasks.length) {
+    c.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Задачи не найдены</div><p class="empty-desc">Нет задач, соответствующих текущему фильтру.</p></div>`;
+    return;
+  }
+  c.innerHTML = `<div class="tasks-grid">${tasks.map(employeeCard).join('')}</div>`;
+}
+
+function employeeCard(t) {
+  const overdue = isOverdue(t);
+  return `
+    <div class="task-card priority-${t.priority} ${overdue?'overdue':''}" onclick="openModal(${t.id})">
+      <div class="task-card-header">
+        <h3 class="task-card-title ${t.status==='done'?'done-text':''}">${esc(t.title)}</h3>
+      </div>
+      ${t.description?`<p class="task-card-desc">${esc(t.description)}</p>`:''}
+      <div class="task-card-meta">
+        ${statusBadge(t.status)}
+        ${priorityBadge(t.priority)}
+        ${deadlineBadge(t.deadline,t.status)}
+      </div>
+      <div class="task-card-actions" onclick="event.stopPropagation()">
+        ${t.status!=='done'
+          ?`<button class="btn btn-sm btn-secondary" onclick="quickStatus(${t.id},'${t.status==='todo'?'doing':'done'}')">${t.status==='todo'?'▶ Взять в работу':'✓ Завершить'}</button>`
+          :`<button class="btn btn-sm btn-secondary" onclick="quickStatus(${t.id},'todo')">↺ Открыть снова</button>`}
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px;">${formatDate(t.created_at)}</div>
+    </div>`;
+}
+
+// ── Modal ──
+function openModal(id) {
+  const t = allTasks.find(x=>x.id===id);
+  if (!t) return;
+  editingId = id;
+  document.getElementById('modalBody').innerHTML =
+    currentUser.role === 'employee' ? employeeModalBody(t) : pmModalBody(t);
+  document.getElementById('editModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('modalForm').addEventListener('submit', submitModal);
+}
+
+function pmModalBody(t) {
+  const usersOpts = allUsers.map(u=>`<option value="${u.id}" ${t.assigned_to===u.id?'selected':''}>${esc(u.username)} (${u.role})</option>`).join('');
+  const deadlineVal = t.deadline ? t.deadline.split('T')[0] : '';
+  return `
+    <form class="modal-form" id="modalForm">
+      <div class="form-group">
+        <label class="form-label">Название</label>
+        <input class="form-input" type="text" id="mTitle" value="${esc(t.title)}" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Описание</label>
+        <textarea class="form-textarea" id="mDesc" style="min-height:80px">${esc(t.description||'')}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Исполнитель</label>
+        <select class="form-select" id="mAssign">${usersOpts}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Срок выполнения <span style="color:var(--text3);font-size:11px">(не обязательно)</span></label>
+        <input class="form-input" type="date" id="mDeadline" value="${deadlineVal}" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Статус</label>
+        <div class="status-grid">
+          ${['todo','doing','done'].map(s=>`<label class="status-option"><input type="radio" name="mStatus" value="${s}" ${t.status===s?'checked':''}><span class="status-label">${s==='todo'?'Запланировано':s==='doing'?'В работе':'Выполнено'}</span></label>`).join('')}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Приоритет</label>
+        <div class="priority-grid">
+          ${['low','medium','high'].map(p=>`<label class="priority-option ${p}"><input type="radio" name="mPriority" value="${p}" ${t.priority===p?'checked':''}><span class="priority-label">${p==='low'?'▽ Низкий':p==='medium'?'◇ Средний':'△ Высокий'}</span></label>`).join('')}
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+        <button type="submit" class="btn btn-primary" id="mSubmit">Сохранить</button>
+      </div>
+    </form>`;
+}
+
+function employeeModalBody(t) {
+  return `
+    <form class="modal-form" id="modalForm">
+      <div style="background:var(--bg2);border-radius:var(--radius);padding:16px;margin-bottom:4px">
+        <div style="font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:6px">${esc(t.title)}</div>
+        ${t.description?`<p style="font-size:14px;color:var(--text2);font-weight:300">${esc(t.description)}</p>`:''}
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          ${priorityBadge(t.priority)}
+          ${deadlineBadge(t.deadline,t.status)}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Изменить статус</label>
+        <div class="status-grid">
+          ${['todo','doing','done'].map(s=>`<label class="status-option"><input type="radio" name="mStatus" value="${s}" ${t.status===s?'checked':''}><span class="status-label">${s==='todo'?'Запланировано':s==='doing'?'В работе':'Выполнено'}</span></label>`).join('')}
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+        <button type="submit" class="btn btn-primary" id="mSubmit">Обновить статус</button>
+      </div>
+    </form>`;
+}
+
+async function submitModal(e) {
+  e.preventDefault();
+  const btn = document.getElementById('mSubmit');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Сохранение...';
+
+  let body = {};
+  if (currentUser.role === 'employee') {
+    body = { status: document.querySelector('input[name="mStatus"]:checked')?.value };
+  } else {
+    body = {
+      title:       document.getElementById('mTitle').value.trim(),
+      description: document.getElementById('mDesc').value,
+      assigned_to: parseInt(document.getElementById('mAssign').value),
+      deadline:    document.getElementById('mDeadline').value || null,
+      status:      document.querySelector('input[name="mStatus"]:checked')?.value,
+      priority:    document.querySelector('input[name="mPriority"]:checked')?.value,
+    };
+  }
+
+  const res = await API.put('/api/tasks/'+editingId, body);
+  if (res.ok) {
+    const idx = allTasks.findIndex(t=>t.id===editingId);
+    if (idx>-1) allTasks[idx] = res.data;
+    await loadUsers();
+    updateStats(); render(); closeModal();
+    showToast('Задача обновлена!');
+  } else {
+    showToast(res.data.error||'Не удалось.', 'error');
+    btn.disabled=false; btn.innerHTML='Сохранить';
+  }
+}
+
+function closeModal(e) {
+  if (e && e.target!==e.currentTarget) return;
+  document.getElementById('editModal').style.display='none';
+  document.body.style.overflow='';
+  editingId=null;
+}
+
+async function quickStatus(id, status) {
+  const res = await API.put('/api/tasks/'+id, { status });
+  if (res.ok) {
+    const t = allTasks.find(x=>x.id===id);
+    if (t) t.status=status;
+    updateStats(); render();
+  } else showToast('Не удалось.','error');
+}
+
+async function deleteTask(id) {
+  if (!confirm('Удалить эту задачу?')) return;
+  const res = await API.delete('/api/tasks/'+id);
+  if (res.ok) {
+    allTasks = allTasks.filter(t=>t.id!==id);
+    await loadUsers(); updateStats(); render();
+    showToast('Задача удалена.');
+  } else showToast('Не удалось.','error');
+}
+
+init();
+</script>
+</body>
+</html>

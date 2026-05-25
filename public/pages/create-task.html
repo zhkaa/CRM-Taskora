@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taskora — Новая задача</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<nav class="navbar">
+  <a href="/dashboard" class="navbar-logo"><span class="logo-dot"></span>Taskora</a>
+  <div class="navbar-right">
+    <span class="navbar-username" id="navUsername"></span>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">Выйти</button>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="form-page">
+    <a href="/dashboard" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+      Вернуться к доске
+    </a>
+    <div class="page-header" style="margin-bottom:24px">
+      <div>
+        <h1 class="page-title">Новая задача</h1>
+        <p class="page-subtitle" id="pageSubtitle">Создайте задачу</p>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <form class="form-stack" id="createForm">
+
+        <!-- Кому назначить — только для pm/admin -->
+        <div class="form-group" id="assignSection" style="display:none">
+          <label class="form-label">Назначить</label>
+          <div class="assignee-grid" id="assigneeGrid">
+            <div class="loading-state" style="padding:16px;grid-column:1/-1;font-size:13px;color:var(--text3)">
+              Загрузка команды...
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Название <span style="color:var(--red)">*</span></label>
+          <input class="form-input" type="text" id="taskTitle" placeholder="например, Реализовать страницу входа" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Описание</label>
+          <textarea class="form-textarea" id="taskDesc" placeholder="Добавьте детали, критерии приемки..." style="min-height:120px"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Срок выполнения <span style="color:var(--text3);font-size:11px">(не обязательно)</span></label>
+          <input class="form-input" type="date" id="taskDeadline" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Статус</label>
+          <div class="status-grid">
+            <label class="status-option"><input type="radio" name="taskStatus" value="todo" checked><span class="status-label">Запланировано</span></label>
+            <label class="status-option"><input type="radio" name="taskStatus" value="doing"><span class="status-label">В работе</span></label>
+            <label class="status-option"><input type="radio" name="taskStatus" value="done"><span class="status-label">Выполнено</span></label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Приоритет</label>
+          <div class="priority-grid">
+            <label class="priority-option low"><input type="radio" name="taskPriority" value="low"><span class="priority-label">▽ Низкий</span></label>
+            <label class="priority-option medium"><input type="radio" name="taskPriority" value="medium" checked><span class="priority-label">◇ Средний</span></label>
+            <label class="priority-option high"><input type="radio" name="taskPriority" value="high"><span class="priority-label">△ Высокий</span></label>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <a href="/dashboard" class="btn btn-ghost">Отмена</a>
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Создать задачу
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+
+<div class="toast-container"></div>
+<script src="/js/utils.js"></script>
+<script>
+let currentUser = null;
+
+async function init() {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+  document.getElementById('navUsername').textContent = currentUser.username;
+
+  if (currentUser.role === 'pm' || currentUser.role === 'admin') {
+    document.getElementById('assignSection').style.display = 'block';
+    document.getElementById('pageSubtitle').textContent = 'Создайте задачу и назначьте ее члену команды';
+    await loadUsers();
+  } else {
+    document.getElementById('pageSubtitle').textContent = 'Создайте задачу для себя';
+  }
+}
+
+async function loadUsers() {
+  const res = await API.get('/api/users');
+  if (!res.ok) { showToast('Не удалось загрузить команду.','error'); return; }
+  const users = res.data.filter(u => u.role !== 'admin');
+  const grid  = document.getElementById('assigneeGrid');
+  // Добавляем "себе" как первый вариант
+  const selfFirst = [
+    { id: currentUser.userId, username: currentUser.username + ' (me)', role: currentUser.role },
+    ...users.filter(u => u.id !== currentUser.userId)
+  ];
+  grid.innerHTML = selfFirst.map((u, i) => `
+    <label class="assignee-option">
+      <input type="radio" name="assignee" value="${u.id}" ${i===0?'checked':''}>
+      <span class="assignee-label">
+        <div class="avatar" style="width:26px;height:26px;font-size:10px">${esc(u.username).slice(0,2).toUpperCase()}</div>
+        <span style="font-size:12px">${esc(u.username)}</span>
+      </span>
+    </label>`).join('');
+}
+
+document.getElementById('createForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Creating...';
+
+  const title       = document.getElementById('taskTitle').value.trim();
+  const description = document.getElementById('taskDesc').value;
+  const deadline    = document.getElementById('taskDeadline').value || null;
+  const status      = document.querySelector('input[name="taskStatus"]:checked')?.value  || 'todo';
+  const priority    = document.querySelector('input[name="taskPriority"]:checked')?.value || 'medium';
+
+  const body = { title, description, deadline, status, priority };
+
+  if (currentUser.role === 'pm' || currentUser.role === 'admin') {
+    const assignee = document.querySelector('input[name="assignee"]:checked')?.value;
+    if (assignee) body.assigned_to = parseInt(assignee);
+  }
+
+  const res = await API.post('/api/tasks', body);
+  if (res.ok) {
+    showToast('Задача создана!');
+    setTimeout(() => window.location.href='/dashboard', 700);
+  } else {
+    showToast(res.data.error||'Не удалось создать.','error');
+    btn.disabled=false;
+    btn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Создать задачу`;
+  }
+});
+
+init();
+</script>
+</body>
+</html>
