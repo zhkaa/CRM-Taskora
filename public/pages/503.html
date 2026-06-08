@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>503 — Сервис недоступен · Taskora</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .error-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 20px;
+      background: var(--bg);
+    }
+    .error-code {
+      font-family: var(--font-display);
+      font-size: clamp(80px, 15vw, 160px);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, var(--green) 0%, #6ee7b7 50%, transparent 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+      position: relative;
+    }
+    .error-code::after {
+      content: '503';
+      position: absolute;
+      inset: 0;
+      font-family: var(--font-display);
+      font-size: inherit;
+      font-weight: 800;
+      letter-spacing: inherit;
+      background: linear-gradient(135deg, var(--green) 0%, #6ee7b7 50%, transparent 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: blur(40px);
+      opacity: 0.3;
+      z-index: -1;
+    }
+    .error-icon {
+      width: 72px;
+      height: 72px;
+      background: var(--green-bg);
+      border: 1px solid rgba(52,211,153,0.3);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+      font-size: 32px;
+    }
+    .error-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .error-description {
+      font-size: 15px;
+      color: var(--text2);
+      max-width: 400px;
+      line-height: 1.6;
+      margin-bottom: 36px;
+    }
+    .error-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .error-divider {
+      width: 1px;
+      height: 60px;
+      background: linear-gradient(to bottom, transparent, rgba(52,211,153,0.4), transparent);
+      margin: 0 auto 32px;
+    }
+    .pulse-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+      vertical-align: middle;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      background: var(--green-bg);
+      border: 1px solid rgba(52,211,153,0.3);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: var(--green);
+      margin-bottom: 28px;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-page">
+    <div class="error-icon">🔧</div>
+    <div class="error-code">503</div>
+    <div class="error-divider"></div>
+    <h1 class="error-title">Сервис временно недоступен</h1>
+    <div class="status-badge">
+      <span class="pulse-dot"></span>
+      Ведутся технические работы
+    </div>
+    <p class="error-description">
+      Мы проводим плановое обслуживание. Сервис будет восстановлен в ближайшее время. Попробуйте позже.
+    </p>
+    <div class="error-actions">
+      <button class="btn btn-primary" onclick="location.reload()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Попробовать снова
+      </button>
+    </div>
+  </div>
+</body>
+</html>
