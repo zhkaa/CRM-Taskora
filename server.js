@@ -31,8 +31,14 @@ app.get('/dashboard',         (_, res) => res.sendFile(path.join(__dirname, 'pub
 app.get('/create-task',       (_, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'create-task.html')));
 app.get('/admin',             (_, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'admin.html')));
 
-app.use((_, res) => res.status(404).json({ error: 'Not found.' }));
-app.use((err, req, res, next) => { console.error(err); res.status(500).json({ error: 'Server error.' }); });
+// 404
+app.use((_, res) => res.status(404).sendFile(path.join(__dirname, 'public', 'pages', '404.html')));
+
+// 500
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).sendFile(path.join(__dirname, 'public', 'pages', '500.html'));
+});
 
 async function start() {
   await initDb();
