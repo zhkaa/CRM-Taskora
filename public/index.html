@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taskora — Управление задачами для команды</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/index.css" />
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="land-nav">
+  <a href="/" class="land-nav-logo">
+    <span class="logo-dot"></span>Taskora
+  </a>
+  <div class="land-nav-links">
+    <a href="/login"    class="btn btn-ghost btn-sm">Войти</a>
+    <a href="/register" class="btn btn-primary btn-sm">Начать</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge"><span></span> Разработано для современных команд</div>
+  <h1 class="hero-title">
+    Управляйте задачами.<br>
+    <span class="grad">Доставляйте быстрее.</span>
+  </h1>
+  <p class="hero-sub">
+    Taskora дает вашей команде единое место для контроля задач, распределения работы и соблюдения сроков — с полной прозрачностью по всем проектам.
+  </p>
+  <div class="hero-actions">
+    <a href="/register" class="btn btn-primary" style="font-size:15px;padding:12px 28px">
+      Начать бесплатно
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+    <a href="/login" class="btn btn-ghost" style="font-size:15px;padding:12px 28px">Войти</a>
+  </div>
+
+  <!-- Fake Kanban Preview -->
+  <div class="hero-preview">
+    <div class="preview-bar">
+      <div class="preview-dot" style="background:#f87171"></div>
+      <div class="preview-dot" style="background:#fbbf24"></div>
+      <div class="preview-dot" style="background:#34d399"></div>
+      <span style="font-size:12px;color:var(--text3);margin-left:8px">Taskora — Team Board</span>
+    </div>
+    <div class="preview-body">
+      <div class="preview-kanban">
+        <div class="preview-col">
+          <div class="preview-col-title" style="color:var(--text3)">To Do</div>
+          <div class="preview-card">
+            <div class="preview-card-title">Design new landing page</div>
+            <span class="preview-tag" style="background:var(--red-bg);color:var(--red)">△ High</span>
+          </div>
+          <div class="preview-card">
+            <div class="preview-card-title">Write API documentation</div>
+            <span class="preview-tag" style="background:var(--yellow-bg);color:var(--yellow)">◇ Medium</span>
+          </div>
+        </div>
+        <div class="preview-col">
+          <div class="preview-col-title" style="color:var(--blue)">In Progress</div>
+          <div class="preview-card">
+            <div class="preview-card-title">Implement auth flow</div>
+            <span class="preview-tag" style="background:var(--red-bg);color:var(--red)">△ High</span>
+          </div>
+          <div class="preview-card">
+            <div class="preview-card-title">Set up CI/CD pipeline</div>
+            <span class="preview-tag" style="background:var(--yellow-bg);color:var(--yellow)">◇ Medium</span>
+          </div>
+        </div>
+        <div class="preview-col">
+          <div class="preview-col-title" style="color:var(--green)">Done</div>
+          <div class="preview-card" style="opacity:0.6">
+            <div class="preview-card-title" style="text-decoration:line-through">Project kickoff</div>
+            <span class="preview-tag" style="background:var(--green-bg);color:var(--green)">✓ Done</span>
+          </div>
+          <div class="preview-card" style="opacity:0.6">
+            <div class="preview-card-title" style="text-decoration:line-through">Setup repository</div>
+            <span class="preview-tag" style="background:var(--green-bg);color:var(--green)">✓ Done</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Features -->
+<section>
+  <div class="section-label">Возможности</div>
+  <h2 class="section-title">Все, что нужно вашей команде</h2>
+  <p class="section-sub">От фрилансеров до крупных команд — Taskora масштабируется вместе с вами.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">📋</span>
+      <div class="feature-title">Доски Kanban</div>
+      <div class="feature-desc">Визуализируйте рабочий процесс с помощью удобных досок Kanban. Перемещайте задачи из «К выполнению» в «В работе» и «Готово» за секунды.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🏢</span>
+      <div class="feature-title">Множество компаний</div>
+      <div class="feature-desc">Каждая компания получает собственное безопасное пространство. Команды не видят данные друг друга.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">👥</span>
+      <div class="feature-title">Роли команды</div>
+      <div class="feature-desc">Админ, менеджер проекта и сотрудник — у каждого свои права. Все видят только то, что им нужно.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🔑</span>
+      <div class="feature-title">Пригласительные коды</div>
+      <div class="feature-desc">Раздавайте уникальные коды команде. Без почты — просто вставил код и вошел.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">⏰</span>
+      <div class="feature-title">Контроль сроков</div>
+      <div class="feature-desc">Никогда не пропускайте дедлайн. Просроченные задачи отмечаются автоматически.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📊</span>
+      <div class="feature-title">Аналитика</div>
+      <div class="feature-desc">Отслеживайте эффективность, выполнение задач и приоритеты — все в одном удобном дашборде.</div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section style="background:var(--bg2);max-width:100%;padding:80px 0">
+  <div style="max-width:1200px;margin:0 auto;padding:0 48px">
+    <div style="text-align:center;margin-bottom:52px">
+      <div class="section-label">Как это работает</div>
+      <h2 class="section-title">Запуск всего за пару минут</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-title">Зарегистрируйте компанию</div>
+        <div class="step-desc">Зарегистрируйтесь как менеджер, введите название компании и выберите план. Займет 30 секунд.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-title">Отправьте код приглашения</div>
+        <div class="step-desc">Вы получите уникальный код, например <span style="font-family:monospace;color:var(--accent)">ACME-X7K2</span>. Поделитесь им с командой.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-title">Команда присоединяется мгновенно</div>
+        <div class="step-desc">Сотрудники вводят код на странице регистрации и сразу попадают в рабочее пространство.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-title">Начните назначать задачи</div>
+        <div class="step-desc">Создавайте задачи, ставьте приоритеты и сроки, назначайте исполнителей.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Plans -->
+<section id="plans">
+  <div style="text-align:center;margin-bottom:52px">
+    <div class="section-label">Тарифы</div>
+    <h2 class="section-title">Простое и прозрачное ценообразование</h2>
+    <p class="section-sub" style="margin:0 auto">Без скрытых платежей. Отмена в любой момент.</p>
+  </div>
+  <div class="plans-grid">
+    <div class="plan-card">
+      <span class="plan-icon">🌱</span>
+      <div class="plan-name">Starter</div>
+      <div class="plan-price">$0 <span>/ месяц</span></div>
+      <div class="plan-desc">Идеально для маленьких команд, которые только начинают.</div>
+      <ul class="plan-features">
+        <li>До 5 участников</li>
+        <li>Неограниченное количество задач</li>
+        <li>Доски Kanban</li>
+        <li>Система пригласительных кодов</li>
+        <li>Базовая аналитика</li>
+      </ul>
+      <a href="/register" class="btn btn-secondary" style="width:100%;justify-content:center">Начать бесплатно</a>
+    </div>
+    <div class="plan-card featured">
+      <div class="plan-featured-badge">Популярно</div>
+      <span class="plan-icon">⚡</span>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">$29 <span>/ месяц</span></div>
+      <div class="plan-desc">Для растущих команд, которым нужно больше возможностей.</div>
+      <ul class="plan-features">
+        <li>Неограниченное число участников</li>
+        <li>Неограниченные задачи</li>
+        <li>Расширенная аналитика</li>
+        <li>Отслеживание приоритетов и сроков</li>
+        <li>Несколько аккаунтов менеджеров</li>
+        <li>Приоритетная поддержка</li>
+      </ul>
+      <a href="/register" class="btn btn-primary" style="width:100%;justify-content:center">Попробовать Pro</a>
+    </div>
+    <div class="plan-card">
+      <span class="plan-icon">🏢</span>
+      <div class="plan-name">Enterprise</div>
+      <div class="plan-price">По запросу</div>
+      <div class="plan-desc">Для крупных организаций с особыми требованиями.</div>
+      <ul class="plan-features">
+        <li>Все возможности Pro</li>
+        <li>Выделенная админ-панель</li>
+        <li>Несколько компаний</li>
+        <li>SSO / кастомная авторизация</li>
+        <li>Гарантия SLA</li>
+        <li>Выделенная поддержка</li>
+      </ul>
+      <a href="/register" class="btn btn-secondary" style="width:100%;justify-content:center">Связаться с нами</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <div class="section-label" style="margin-bottom:16px">Готовы к старту?</div>
+  <h2 class="section-title" style="margin-bottom:16px">Ваша команда ждет</h2>
+  <p style="font-size:17px;color:var(--text2);margin-bottom:36px;font-weight:300">
+    Присоединяйтесь к сотням команд, которые уже используют Taskora для организации работы и своевременной сдачи проектов.
+  </p>
+  <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+    <a href="/register" class="btn btn-primary" style="font-size:15px;padding:13px 32px">
+      Начать бесплатно
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+    <a href="/login" class="btn btn-ghost" style="font-size:15px;padding:13px 32px">Войти</a>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="land-footer">
+  <a href="/" class="land-nav-logo" style="font-size:16px">
+    <span class="logo-dot" style="width:7px;height:7px"></span>Taskora
+  </a>
+  <div style="display:flex;gap:24px">
+    <a href="#plans">Тарифы</a>
+    <a href="/login">Войти</a>
+    <a href="/register">Регистрация</a>
+  </div>
+  <div>© 2025 Taskora. Все права защищены.</div>
+</footer>
+
+</body>
+</html>

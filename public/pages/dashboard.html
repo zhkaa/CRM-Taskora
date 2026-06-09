@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taskora — Панель задач</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<nav class="navbar">
+  <a href="/dashboard" class="navbar-logo"><span class="logo-dot"></span>Taskora</a>
+  <div class="navbar-right">
+    <span id="navRole"></span>
+    <span class="navbar-username" id="navUsername"></span>
+    <a href="/create-task" class="btn btn-primary btn-sm">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Новая задача
+    </a>
+    <div id="adminLink"></div>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">Выйти</button>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title" id="pageTitle">Панель задач</h1>
+      <p class="page-subtitle" id="pageSubtitle">Загрузка...</p>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-num" id="statTotal">—</div><div class="stat-label">Всего</div></div>
+    <div class="stat-card"><div class="stat-num" id="statTodo">—</div><div class="stat-label">Запланировано</div></div>
+    <div class="stat-card"><div class="stat-num" id="statDoing">—</div><div class="stat-label">В работе</div></div>
+    <div class="stat-card"><div class="stat-num" id="statDone">—</div><div class="stat-label">Выполнено</div></div>
+    <div class="stat-card"><div class="stat-num" id="statOverdue" style="color:var(--red)">—</div><div class="stat-label">Просрочено</div></div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all"   onclick="setFilter('all')">Все <span class="filter-count" id="fc-all">0</span></button>
+    <button class="filter-btn"        data-filter="todo"  onclick="setFilter('todo')">Запланировано <span class="filter-count" id="fc-todo">0</span></button>
+    <button class="filter-btn"        data-filter="doing" onclick="setFilter('doing')">В работе <span class="filter-count" id="fc-doing">0</span></button>
+    <button class="filter-btn"        data-filter="done"  onclick="setFilter('done')">Выполнено <span class="filter-count" id="fc-done">0</span></button>
+    <button class="filter-btn" data-filter="overdue" onclick="setFilter('overdue')" style="color:var(--red)">🔴 Просрочено <span class="filter-count" id="fc-overdue">0</span></button>
+    <div class="search-wrapper">
+      <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" type="text" id="searchInput" placeholder="Поиск задач..." oninput="onSearch()" />
+    </div>
+  </div>
+
+  <div id="mainContent">
+    <div class="loading-state">
+      <div class="spinner" style="border-color:rgba(124,106,247,0.3);border-top-color:var(--accent);"></div>
+      Загрузка...
+    </div>
+  </div>
+</main>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal" style="display:none;" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Редактировать задачу</h2>
+      <button class="btn-icon" onclick="closeModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="/js/utils.js"></script>
+<script>
+let allTasks      = [];
+let allUsers      = [];
+let currentFilter = 'all';
+let currentSearch = '';
+let editingId     = null;
+let activeAssignee = null;
+let currentUser   = null;
+
+async function init() {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+
+  if (currentUser.role === 'admin') {
+    window.location.href = '/admin';
+    return;
+  }
+
+  document.getElementById('navUsername').textContent = currentUser.username;
+  document.getElementById('navRole').innerHTML = roleBadge(currentUser.role);
+
+  if (currentUser.role === 'pm') {
+    document.getElementById('pageTitle').textContent    = 'Командная доска';
+    document.getElementById('pageSubtitle').textContent = 'Все задачи команды';
+    await loadUsers();
+  }
+
+  await loadTasks();
+}
+
+async function loadUsers() {
+  const res = await API.get('/api/users');
+  if (!res.ok) return;
+  allUsers = res.data.filter(u => u.role !== 'admin');
+  renderTeamPanel();
+}
+
+async function loadTasks() {
+  const res = await API.get('/api/tasks');
+  if (!res.ok) { showToast('Не удалось загрузить задачи.','error'); return; }
+  allTasks = res.data;
+  updateStats();
+  renderContent();
+}
+
+function updateStats() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const total   = allTasks.length;
+  const todo    = allTasks.filter(t => t.status==='todo').length;
+  const doing   = allTasks.filter(t => t.status==='doing').length;
+  const done    = allTasks.filter(t => t.status==='done').length;
+  const overdue = allTasks.filter(t => t.deadline && t.status!=='done' && new Date(t.deadline) < today).length;
+
+  document.getElementById('statTotal').textContent  = total;
+  document.getElementById('statTodo').textContent   = todo;
+  document.getElementById('statDoing').textContent  = doing;
+  document.getElementById('statDone').textContent   = done;
+  if (document.getElementById('statOverdue'))
+    document.getElementById('statOverdue').textContent = overdue;
+
+  document.getElementById('fc-all').textContent    = total;
+  document.getElementById('fc-todo').textContent   = todo;
+  document.getElementById('fc-doing').textContent  = doing;
+  document.getElementById('fc-done').textContent   = done;
+  if (document.getElementById('fc-overdue'))
+    document.getElementById('fc-overdue').textContent = overdue;
+}
+
+function getFilteredTasks() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return allTasks.filter(t => {
+    if (activeAssignee && t.assigned_to !== activeAssignee) return false;
+    if (currentFilter === 'todo')    return t.status==='todo';
+    if (currentFilter === 'doing')   return t.status==='doing';
+    if (currentFilter === 'done')    return t.status==='done';
+    if (currentFilter === 'overdue') return t.deadline && t.status!=='done' && new Date(t.deadline) < today;
+    return true;
+  }).filter(t => {
+    if (!currentSearch) return true;
+    const q = currentSearch.toLowerCase();
+    return t.title.toLowerCase().includes(q) || (t.description||'').toLowerCase().includes(q);
+  });
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter===f));
+  renderContent();
+}
+
+function onSearch() {
+  currentSearch = document.getElementById('searchInput').value;
+  renderContent();
+}
+
+function renderContent() {
+  const tasks = getFilteredTasks();
+  const el    = document.getElementById('mainContent');
+
+  if (currentUser.role === 'pm') {
+    renderKanban(tasks, el);
+  } else {
+    renderGrid(tasks, el);
+  }
+}
+
+function renderGrid(tasks, el) {
+  if (!tasks.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">Задач не найдено</div>
+      <div class="empty-desc">Создайте первую задачу или измените фильтр</div>
+      <a href="/create-task" class="btn btn-primary">+ Новая задача</a>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `<div class="tasks-grid">${tasks.map(t => taskCardHtml(t)).join('')}</div>`;
+}
+
+function renderKanban(tasks, el) {
+  const cols = {
+    todo:  tasks.filter(t=>t.status==='todo'),
+    doing: tasks.filter(t=>t.status==='doing'),
+    done:  tasks.filter(t=>t.status==='done'),
+  };
+  const colLabels = { todo:'Запланировано', doing:'В работе', done:'Выполнено' };
+
+  el.innerHTML = `<div class="kanban">` + Object.entries(cols).map(([status, list]) => `
+    <div class="kanban-col kanban-col-${status}">
+      <div class="kanban-col-header">
+        <span>${colLabels[status]}</span>
+        <span class="filter-count" style="background:rgba(255,255,255,0.08);color:var(--text3)">${list.length}</span>
+      </div>
+      <div class="kanban-col-body">
+        ${list.length ? list.map(t => kanbanCardHtml(t)).join('') : `<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Пусто</div>`}
+      </div>
+    </div>`).join('') + `</div>`;
+}
+
+function taskCardHtml(t) {
+  const canTake = currentUser.role === 'employee' && !t.assigned_to;
+  const isOverdue = t.deadline && t.status !== 'done' && new Date(t.deadline) < new Date();
+  return `<div class="task-card priority-${t.priority} ${isOverdue?'overdue':''}" onclick="openEdit(${t.id})">
+    <div class="task-card-header">
+      <div class="task-card-title ${t.status==='done'?'done-text':''}">${esc(t.title)}</div>
+      ${priorityBadge(t.priority)}
+    </div>
+    ${t.description ? `<div class="task-card-desc">${esc(t.description)}</div>` : ''}
+    <div class="task-card-meta">
+      ${statusBadge(t.status)}
+      ${assigneeChip(t, currentUser, canTake)}
+    </div>
+    <div class="task-card-meta">
+      ${timerHtml(t.deadline, t.status)}
+    </div>
+  </div>`;
+}
+
+function kanbanCardHtml(t) {
+  const canTake = currentUser.role === 'employee' && !t.assigned_to;
+  return `<div class="kanban-card priority-${t.priority}" onclick="openEdit(${t.id})">
+    <div class="kanban-card-title">${esc(t.title)}</div>
+    ${assigneeChip(t, currentUser, canTake)}
+    <div class="kanban-card-footer">
+      ${priorityBadge(t.priority)}
+      ${timerHtml(t.deadline, t.status)}
+    </div>
+  </div>`;
+}
+
+function renderTeamPanel() {
+  const sidebar = document.getElementById('teamSidebar');
+  if (!sidebar) return;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const members = allUsers.map(u => {
+    const tasks   = allTasks.filter(t => t.assigned_to === u.id);
+    const todo    = tasks.filter(t=>t.status==='todo').length;
+    const doing   = tasks.filter(t=>t.status==='doing').length;
+    const done    = tasks.filter(t=>t.status==='done').length;
+    const overdue = tasks.filter(t=>t.deadline&&t.status!=='done'&&new Date(t.deadline)<today).length;
+    const total   = tasks.length;
+    const pct     = total ? Math.round(done/total*100) : 0;
+    return { ...u, todo, doing, done, overdue, total, pct };
+  });
+
+  sidebar.innerHTML = `
+    <div class="team-panel">
+      <div class="team-panel-header">👥 Команда</div>
+      <div class="team-member ${activeAssignee===null?'active':''}" onclick="filterByAssignee(null)">
+        <div class="team-member-top">
+          <span class="team-member-name">Все сотрудники</span>
+          <span class="tm-stat tm-todo">${allTasks.length}</span>
+        </div>
+      </div>
+      ${members.map(m => `
+        <div class="team-member ${activeAssignee===m.id?'active':''}" onclick="filterByAssignee(${m.id})">
+          <div class="team-member-top">
+            <span class="team-member-name">${esc(m.username)}</span>
+            <div class="team-member-stats">
+              ${m.todo   ? `<span class="tm-stat tm-todo">${m.todo}</span>`    : ''}
+              ${m.doing  ? `<span class="tm-stat tm-doing">${m.doing}</span>`  : ''}
+              ${m.done   ? `<span class="tm-stat tm-done">${m.done}</span>`    : ''}
+              ${m.overdue? `<span class="tm-stat tm-overdue">${m.overdue}</span>` : ''}
+            </div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-bar"><div class="progress-fill" style="width:${m.pct}%"></div></div>
+            <span class="progress-pct">${m.pct}%</span>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function filterByAssignee(id) {
+  activeAssignee = id;
+  renderTeamPanel();
+  renderContent();
+}
+
+async function takeTask(taskId, e) {
+  e.stopPropagation();
+  const res = await API.post(`/api/tasks/${taskId}/take`, {});
+  if (res.ok) {
+    showToast('Задача взята в работу!');
+    await loadTasks();
+  } else {
+    showToast(res.data.error || 'Не удалось взять задачу.', 'error');
+  }
+}
+
+// Edit modal
+async function openEdit(id) {
+  editingId = id;
+  const task = allTasks.find(t => t.id === id);
+  if (!task) return;
+
+  const modal = document.getElementById('editModal');
+  const body  = document.getElementById('modalBody');
+
+  if (currentUser.role === 'employee') {
+    body.innerHTML = `
+      <div class="modal-form">
+        <div style="margin-bottom:8px">
+          <div style="font-size:18px;font-weight:700;font-family:var(--font-display);margin-bottom:6px">${esc(task.title)}</div>
+          ${task.description ? `<div style="font-size:14px;color:var(--text2)">${esc(task.description)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${priorityBadge(task.priority)} ${statusBadge(task.status)}
+          ${timerHtml(task.deadline, task.status)}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Изменить статус</label>
+          <div class="status-grid">
+            <label class="status-option"><input type="radio" name="eStatus" value="todo" ${task.status==='todo'?'checked':''}><span class="status-label">Запланировано</span></label>
+            <label class="status-option"><input type="radio" name="eStatus" value="doing" ${task.status==='doing'?'checked':''}><span class="status-label">В работе</span></label>
+            <label class="status-option"><input type="radio" name="eStatus" value="done" ${task.status==='done'?'checked':''}><span class="status-label">Выполнено</span></label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+          <button class="btn btn-primary" onclick="saveStatus()">Сохранить</button>
+        </div>
+      </div>`;
+  } else {
+    // PM/Admin full edit
+    const usersRes  = await API.get('/api/users');
+    const users     = usersRes.ok ? usersRes.data.filter(u=>u.role!=='admin') : [];
+    const assignees = [{ id: null, username: 'Не назначать' }, ...users];
+
+    body.innerHTML = `
+      <div class="modal-form">
+        <div class="form-group">
+          <label class="form-label">Название</label>
+          <input class="form-input" id="eTitle" value="${esc(task.title)}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Описание</label>
+          <textarea class="form-textarea" id="eDesc">${esc(task.description||'')}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Срок выполнения</label>
+          <input class="form-input" type="date" id="eDeadline" value="${task.deadline||''}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Исполнитель</label>
+          <select class="form-select" id="eAssignee">
+            ${assignees.map(u=>`<option value="${u.id||''}" ${task.assigned_to===u.id?'selected':''}>${esc(u.username)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Статус</label>
+          <div class="status-grid">
+            <label class="status-option"><input type="radio" name="eStatus" value="todo" ${task.status==='todo'?'checked':''}><span class="status-label">Запланировано</span></label>
+            <label class="status-option"><input type="radio" name="eStatus" value="doing" ${task.status==='doing'?'checked':''}><span class="status-label">В работе</span></label>
+            <label class="status-option"><input type="radio" name="eStatus" value="done" ${task.status==='done'?'checked':''}><span class="status-label">Выполнено</span></label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Приоритет</label>
+          <div class="priority-grid">
+            <label class="priority-option low"><input type="radio" name="ePriority" value="low" ${task.priority==='low'?'checked':''}><span class="priority-label">▽ Низкий</span></label>
+            <label class="priority-option medium"><input type="radio" name="ePriority" value="medium" ${task.priority==='medium'?'checked':''}><span class="priority-label">◇ Средний</span></label>
+            <label class="priority-option high"><input type="radio" name="ePriority" value="high" ${task.priority==='high'?'checked':''}><span class="priority-label">△ Высокий</span></label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:rgba(248,113,113,0.3)" onclick="deleteTask(${task.id})">Удалить</button>
+          <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+          <button class="btn btn-primary" onclick="saveEdit()">Сохранить</button>
+        </div>
+      </div>`;
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('editModal')) return;
+  document.getElementById('editModal').style.display = 'none';
+  editingId = null;
+}
+
+async function saveStatus() {
+  const status = document.querySelector('input[name="eStatus"]:checked')?.value;
+  const res    = await API.put(`/api/tasks/${editingId}`, { status });
+  if (res.ok) { showToast('Статус обновлён!'); closeModal(); await loadTasks(); }
+  else showToast(res.data.error||'Ошибка обновления.','error');
+}
+
+async function saveEdit() {
+  const title    = document.getElementById('eTitle').value.trim();
+  const desc     = document.getElementById('eDesc').value;
+  const deadline = document.getElementById('eDeadline').value || null;
+  const status   = document.querySelector('input[name="eStatus"]:checked')?.value;
+  const priority = document.querySelector('input[name="ePriority"]:checked')?.value;
+  const assigneeVal = document.getElementById('eAssignee').value;
+  const assigned_to = assigneeVal ? parseInt(assigneeVal) : null;
+
+  if (!title) { showToast('Введите название.','error'); return; }
+
+  const res = await API.put(`/api/tasks/${editingId}`, { title, description: desc, deadline, status, priority, assigned_to });
+  if (res.ok) { showToast('Задача обновлена!'); closeModal(); await loadTasks(); }
+  else showToast(res.data.error||'Ошибка обновления.','error');
+}
+
+async function deleteTask(id) {
+  if (!confirm('Удалить задачу?')) return;
+  const res = await API.delete(`/api/tasks/${id}`);
+  if (res.ok) { showToast('Задача удалена!'); closeModal(); await loadTasks(); }
+  else showToast(res.data.error||'Ошибка удаления.','error');
+}
+
+// Обновляем таймеры каждую минуту
+setInterval(() => {
+  document.querySelectorAll('[data-timer-id]').forEach(el => {
+    const task = allTasks.find(t => t.id === parseInt(el.dataset.timerId));
+    if (task) el.outerHTML = timerHtml(task.deadline, task.status);
+  });
+}, 60000);
+
+init();
+</script>
+</body>
+</html>
